@@ -1,0 +1,8 @@
+prefix=/home/hallteon/catkin_workspace/devel
+
+Name: yolo_package
+Description: Description of yolo_package
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
