@@ -1,8 +1,0 @@
-prefix=/home/hallteon/catkin_workspace/install
-
-Name: camera_package
-Description: Description of camera_package
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

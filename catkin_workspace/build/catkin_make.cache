@@ -1,2 +1,0 @@
-camera_package:yolo_package
--DCATKIN_DEVEL_PREFIX=/home/hallteon/catkin_workspace/devel -DCMAKE_INSTALL_PREFIX=/home/hallteon/catkin_workspace/install -G Unix Makefiles
