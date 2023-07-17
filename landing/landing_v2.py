@@ -38,6 +38,9 @@ def callback(position):
 
 
 def distance(x1, y1, x2, y2):  # Дистанция между точками
+    """Данная функция вычисляет расстояние которое должен пройти коптер \n
+    по осям x and y, затем возвращает расстояние в метрах."""
+
     pxm_x, pxm_y = px_in_m(height)
     return ((x2 - x1) * pxm_x) * -1, (y2 - y1) * pxm_y
 
@@ -48,6 +51,11 @@ def converting_pixels_to_meters(range_h):  # Перевод абсолютная
     height = range_h.range
 
 def px_in_m(height):
+    """Данная функция переводит пиксеили в метры (как бы странной это не звучало) \n
+    Для перевода мы используем параметры камеры: угол обзора по x and y, \n
+    разрешение камеры. И также высоту полета коптера. \n
+    Используя немного геометрии мы получаем нужные нам значения."""
+
     camera_vieweing_angle_horizon = 62.2 / 2
     camera_vieweing_angle = 48.8 / 2
     horizont_size = camera_size[0] / 2
@@ -58,7 +66,10 @@ def px_in_m(height):
     return pxm_x, pxm_y
 
 
-def center_pixsels(tags):  # Выравнивание коптера по apritag  
+def alignment_by_apritag(tags):  # Выравнивание коптера по apritag  
+    """Вызывается при использовании ноды с распознаванием april tag \n
+    и обрабатывает полученные результаты. \n
+    Итог: расчет скорости коптера для корректной посадки на apri tag."""
 
     global coord_center_apriltags
     global speed_x
@@ -82,14 +93,17 @@ def center_pixsels(tags):  # Выравнивание коптера по aprita
 
 
 def pi_regulator(delt_x, delt_y, height):
-    v_x = k_x * delt_x * height
-    v_y = k_y * delt_y * height
+    """Расчет скорости с помощью п-регулятор"""
+
+    # Так как у коптера и кратинки разные системы координае x и y меняются местами
+    v_x = k_y * delt_y * height
+    v_y = k_x * delt_x * height
     return v_x, v_y
 
 
 takeoff = rospy.ServiceProxy('mavros/cmd/takeoff', CommandTOL)
 pose_sub = rospy.Subscriber("/mavros/px4flow/ground_distance", Range, converting_pixels_to_meters)  # Высота полета через оптический поток(обтическая)
-pose_sub2 = rospy.Subscriber("/geoscan/vision/apriltag", Apriltag_array, center_pixsels)  # поиск apriltag
+pose_sub2 = rospy.Subscriber("/geoscan/vision/apriltag", Apriltag_array, alignment_by_apritag)  # Распознование apriltag
 pose_sub3 = rospy.Subscriber("mavros/local_position/pose", PoseStamped, callback)
 arm = rospy.ServiceProxy("mavros/cmd/arming", CommandBool)
 cmd_vel_publisher = rospy.Publisher('mavros/setpoint_raw/local', PositionTarget, queue_size=10)
@@ -120,8 +134,8 @@ while not rospy.is_shutdown() and not flag_disarm:
     print(f'speed_x: {speed_x} \t speed_y: {speed_y}')
     if abs(pose.position.z) < 0.5:
         cmd_vel.velocity.z = -0.08
-        cmd_vel.velocity.x = speed_y
-        cmd_vel.velocity.y = speed_x
+        cmd_vel.velocity.x = speed_x
+        cmd_vel.velocity.y = speed_y
     else:
         cmd_vel.velocity.z = -0.1
         cmd_vel.velocity.x = speed_x
