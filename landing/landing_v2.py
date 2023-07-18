@@ -20,6 +20,7 @@ pose = None
 delt_x, delt_y = 0, 0
 speed_x, speed_y = 0, 0
 height = 0
+k_z = 1
 
 flag_landing = False
 flag_disarm = False
@@ -28,8 +29,8 @@ camera_size = [640, 480]
 
 rospy.init_node('Landing_test_v2')
 
-k_x = 0.2
-k_y = 0.2
+k_x = -1.5
+k_y = 1.5
 
 
 def callback(position):
@@ -42,7 +43,7 @@ def distance(x1, y1, x2, y2):  # Дистанция между точками
     по осям x and y, затем возвращает расстояние в метрах."""
 
     pxm_x, pxm_y = px_in_m(height)
-    return ((x2 - x1) * pxm_x) * -1, (y2 - y1) * pxm_y
+    return ((x2 - x1) * pxm_x) * 1, ((y2 - y1) * pxm_y) * 1
 
 
 def converting_pixels_to_meters(range_h):  # Перевод абсолютная высота
@@ -76,28 +77,39 @@ def alignment_by_apritag(tags):  # Выравнивание коптера по 
     global speed_y
     global flag_landing
     global flag_disarm
+    global k_z
 
     if not flag_disarm:
         # print(tags.apriltags)
+        # print(height)
         if tags.apriltags:
             apriltag = tags.apriltags[0]
             
             coord_center_apriltags = [apriltag.center_x, apriltag.center_y]
             delt_x, delt_y = distance(coord_center_apriltags[0], coord_center_apriltags[1], camera_size[0] / 2, camera_size[1] / 2)
-            speed_x, speed_y = pi_regulator(delt_x, delt_y, height)
+            # print('\t', delt_x, delt_y, camera_size[0] / 2, camera_size[1] / 2)
+            # print(coord_center_apriltags)
+            speed_x, speed_y = p_regulator(delt_x, delt_y, height)
             # print(speed_x, speed_y)
+            k_z = 1
+            if (abs(pose.position.z) < 0.4):
+                flag_disarm = True
+                print('Новая траектория...')   
         else:
-            print(tags.apriltags)
-            flag_disarm = True
+            k_z = -1
+            if (abs(pose.position.z) > 1.8):
+                flag_disarm = True
+                print('Новая траектория...')
+            speed_x, speed_y = 0., 0.
             print('waiting for tags...')
 
 
-def pi_regulator(delt_x, delt_y, height):
+def p_regulator(delt_x, delt_y, height):
     """Расчет скорости с помощью п-регулятор"""
 
     # Так как у коптера и кратинки разные системы координае x и y меняются местами
-    v_x = k_y * delt_y * height
-    v_y = k_x * delt_x * height
+    v_y = k_y * delt_y #* height
+    v_x = k_x * delt_x #* height
     return v_x, v_y
 
 
@@ -125,6 +137,8 @@ rospy.sleep(5)
 print('Удержание на высоте')
 
 
+
+
 cmd_vel.velocity.x = 0
 cmd_vel.velocity.y = 0
 cmd_vel_publisher.publish(cmd_vel) 
@@ -133,15 +147,15 @@ rospy.sleep(3)
 while not rospy.is_shutdown() and not flag_disarm:
     print(f'speed_x: {speed_x} \t speed_y: {speed_y}')
     if abs(pose.position.z) < 0.5:
-        cmd_vel.velocity.z = -0.08
+        cmd_vel.velocity.z = -0.08 * k_z
         cmd_vel.velocity.x = speed_x
         cmd_vel.velocity.y = speed_y
     else:
-        cmd_vel.velocity.z = -0.1
+        cmd_vel.velocity.z = -0.1 * k_z
         cmd_vel.velocity.x = speed_x
         cmd_vel.velocity.y = speed_y
     cmd_vel_publisher.publish(cmd_vel) 
-    rospy.sleep(0.1)
+    # rospy.sleep(0.05)
 
 # print(covecient_y , covecient_x)
 
@@ -165,4 +179,3 @@ arm(False)
 rospy.sleep(0.1)
 
 print("Мой госпадин, посадка прошла успешно! Урааа!")
-
